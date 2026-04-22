@@ -143,7 +143,7 @@
 
     <script>
         function extractChain(url) {
-            const patterns = [/chain=([A-Za-z0-9]+)/, /\\/share\\/([A-Za-z0-9]+)\\.html/];
+            const patterns = [/chain=([A-Za-z0-9]+)/, /\/share\/([A-Za-z0-9]+)\.html/];
             for (const pattern of patterns) {
                 const match = url.match(pattern);
                 if (match) return match[1];
