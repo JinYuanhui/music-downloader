@@ -237,6 +237,9 @@
         document.getElementById('url').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') startDownload();
         });
+        
+        // 确保函数在全局作用域可用
+        window.startDownload = startDownload;
     </script>
 </body>
 </html>
