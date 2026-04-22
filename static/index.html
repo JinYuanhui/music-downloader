@@ -207,84 +207,28 @@
             if (!url) { showError('请输入音乐链接'); return; }
             if (!url.includes('kugou.com')) { showError('目前仅支持酷狗音乐链接'); return; }
             
-            const chain = extractChain(url);
-            if (!chain) { showError('无法解析链接，请检查链接格式'); return; }
-            
             btn.disabled = true;
             result.className = 'result loading';
             result.innerHTML = '<span class="spinner"></span>正在解析链接...';
             
             try {
-                const shareUrl = 'https://www.kugou.com/share/' + chain + '.html';
+                // 使用后端 API（Vercel Serverless Function）
+                const apiUrl = '/api/download?url=' + encodeURIComponent(url);
+                const res = await fetch(apiUrl);
+                const data = await res.json();
                 
-                // 使用多个 CORS 代理服务（GitHub Pages 纯静态方案）
-                const proxies = [
-                    { url: 'https://api.codetabs.com/v1/proxy?quest=', name: 'codetabs' },
-                    { url: 'https://corsproxy.io/?', name: 'corsproxy' },
-                    { url: 'https://api.allorigins.win/raw?url=', name: 'allorigins' }
-                ];
-                
-                let html = null;
-                let lastError = null;
-                
-                for (const proxy of proxies) {
-                    try {
-                        const res = await fetchWithTimeout(proxy.url + encodeURIComponent(shareUrl), 8000);
-                        if (res.ok) {
-                            html = await res.text();
-                            console.log('Proxy succeeded:', proxy.name);
-                            break;
-                        }
-                    } catch (e) {
-                        lastError = e;
-                        console.log('Proxy failed:', proxy.name, e.message);
-                        continue;
-                    }
-                }
-                
-                if (!html) throw new Error('所有代理服务均不可用，请稍后重试或使用本地版本');
-                
-                // 提取 hash
-                const hashMatch = html.match(/"hash":"([A-Fa-f0-9]+)"/);
-                if (!hashMatch) throw new Error('无法获取歌曲信息，请检查链接是否有效');
-                const hash = hashMatch[1];
-                
-                // 获取歌曲信息
-                const apiUrl = 'https://m.kugou.com/app/i/getSongInfo.php?cmd=playInfo&hash=' + hash;
-                
-                let songInfo = null;
-                for (const proxy of proxies) {
-                    try {
-                        const apiRes = await fetchWithTimeout(proxy.url + encodeURIComponent(apiUrl), 8000);
-                        if (apiRes.ok) {
-                            const text = await apiRes.text();
-                            songInfo = JSON.parse(text);
-                            console.log('API proxy succeeded:', proxy.name);
-                            break;
-                        }
-                    } catch (e) {
-                        console.log('API proxy failed:', proxy.name, e.message);
-                        continue;
-                    }
-                }
-                
-                if (!songInfo) throw new Error('无法获取歌曲信息，请稍后重试');
-                
-                if (songInfo.status !== 1) throw new Error('歌曲不可用或需要付费');
-                
-                const downloadUrl = songInfo.url;
-                if (!downloadUrl) throw new Error('无法获取下载链接');
+                if (data.error) throw new Error(data.error);
+                if (!data.success) throw new Error('解析失败');
                 
                 showSuccess({
-                    songName: songInfo.audio_name || songInfo.songName,
-                    artist: songInfo.author_name,
-                    duration: formatDuration(songInfo.timeLength),
-                    size: formatSize(songInfo.fileSize),
-                    downloadUrl: downloadUrl
+                    songName: data.songName,
+                    artist: data.artist,
+                    duration: formatDuration(data.duration),
+                    size: formatSize(data.size),
+                    downloadUrl: data.downloadUrl
                 });
             } catch (err) {
-                console.error('Download error:', err);
-                showError(err.message || '网络错误，请稍后重试');
+                showError(err.message || '解析失败，请稍后重试');
             } finally {
                 btn.disabled = false;
             }
