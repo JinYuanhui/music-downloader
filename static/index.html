@@ -203,11 +203,26 @@
             
             try {
                 const shareUrl = 'https://www.kugou.com/share/' + chain + '.html';
-                const proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(shareUrl);
                 
-                const res = await fetch(proxyUrl);
-                const proxyData = await res.json();
-                const html = proxyData.contents;
+                // 尝试多个代理服务
+                const proxies = [
+                    'https://api.codetabs.com/v1/proxy?quest=',
+                    'https://corsproxy.io/?',
+                    'https://api.allorigins.win/raw?url='
+                ];
+                
+                let html = null;
+                for (const proxy of proxies) {
+                    try {
+                        const res = await fetch(proxy + encodeURIComponent(shareUrl), { timeout: 5000 });
+                        if (res.ok) {
+                            html = await res.text();
+                            break;
+                        }
+                    } catch (e) { continue; }
+                }
+                
+                if (!html) throw new Error('网络请求失败，请检查网络连接或稍后重试');
                 
                 // 提取 hash
                 const hashMatch = html.match(/"hash":"([A-Fa-f0-9]+)"/);
@@ -216,11 +231,20 @@
                 
                 // 获取歌曲信息
                 const apiUrl = 'https://m.kugou.com/app/i/getSongInfo.php?cmd=playInfo&hash=' + hash;
-                const apiProxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(apiUrl);
                 
-                const apiRes = await fetch(apiProxyUrl);
-                const apiProxyData = await apiRes.json();
-                const songInfo = JSON.parse(apiProxyData.contents);
+                let songInfo = null;
+                for (const proxy of proxies) {
+                    try {
+                        const apiRes = await fetch(proxy + encodeURIComponent(apiUrl), { timeout: 5000 });
+                        if (apiRes.ok) {
+                            const text = await apiRes.text();
+                            songInfo = JSON.parse(text);
+                            break;
+                        }
+                    } catch (e) { continue; }
+                }
+                
+                if (!songInfo) throw new Error('网络请求失败，请检查网络连接或稍后重试');
                 
                 if (songInfo.status !== 1) throw new Error('歌曲不可用或需要付费');
                 
