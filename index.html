@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎵 音乐下载器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 500px;
+            width: 100%;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+        .btn:active {
+            transform: translateY(0);
+        }
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+        }
+        .result.success {
+            background: #d4edda;
+            color: #155724;
+            display: block;
+        }
+        .result.error {
+            background: #f8d7da;
+            color: #721c24;
+            display: block;
+        }
+        .result.loading {
+            background: #e7f3ff;
+            color: #004085;
+            display: block;
+        }
+        .song-info {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .song-info h3 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .song-info p {
+            color: #666;
+            margin: 5px 0;
+        }
+        .download-link {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 12px 24px;
+            background: #28a745;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+        .download-link:hover {
+            background: #218838;
+        }
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .supported {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            font-size: 13px;
+        }
+        .supported h4 {
+            margin-bottom: 10px;
+            color: #555;
+        }
+        .supported ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        .supported li {
+            padding: 5px 0;
+            color: #666;
+        }
+        .supported li::before {
+            content: "✓ ";
+            color: #28a745;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 音乐下载器</h1>
+        <p class="subtitle">支持酷狗音乐分享链接</p>
+        
+        <div class="input-group">
+            <label for="url">粘贴音乐链接：</label>
+            <input type="text" id="url" placeholder="https://m.kugou.com/share/song.html?chain=..." autocomplete="off">
+        </div>
+        
+        <button class="btn" id="downloadBtn" onclick="startDownload()">
+            开始下载
+        </button>
+        
+        <div class="result" id="result"></div>
+        
+        <div class="supported">
+            <h4>支持的平台</h4>
+            <ul>
+                <li>酷狗音乐 (kugou.com)</li>
+                <li>更多平台开发中...</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        async function startDownload() {
+            const url = document.getElementById('url').value.trim();
+            const btn = document.getElementById('downloadBtn');
+            const result = document.getElementById('result');
+            
+            if (!url) {
+                showError('请输入音乐链接');
+                return;
+            }
+            
+            // 检查是否为支持的链接
+            if (!url.includes('kugou.com')) {
+                showError('目前仅支持酷狗音乐链接');
+                return;
+            }
+            
+            btn.disabled = true;
+            result.className = 'result loading';
+            result.innerHTML = '<span class="spinner"></span>正在解析链接...';
+            
+            try {
+                // 调用下载 API
+                const response = await fetch('/api/download', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ url: url })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showSuccess(data);
+                } else {
+                    showError(data.message || '下载失败，请检查链接是否正确');
+                }
+            } catch (error) {
+                showError('网络错误，请稍后重试');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+        
+        function showSuccess(data) {
+            const result = document.getElementById('result');
+            result.className = 'result success';
+            result.innerHTML = `
+                <strong>✓ 解析成功！</strong>
+                <div class="song-info">
+                    <h3>${data.songName || '未知歌曲'}</h3>
+                    <p>歌手：${data.artist || '未知'}</p>
+                    <p>时长：${data.duration || '未知'}</p>
+                    <p>大小：${data.size || '未知'}</p>
+                </div>
+                <a href="${data.downloadUrl}" class="download-link" download>⬇️ 下载 MP3</a>
+            `;
+        }
+        
+        function showError(message) {
+            const result = document.getElementById('result');
+            result.className = 'result error';
+            result.innerHTML = `<strong>✗ 错误</strong><br>${message}`;
+        }
+        
+        // 回车键触发下载
+        document.getElementById('url').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                startDownload();
+            }
+        });
+    </script>
+</body>
+</html>
