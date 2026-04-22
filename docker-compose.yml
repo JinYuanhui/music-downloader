@@ -1,0 +1,10 @@
+version: '3.8'
+
+services:
+  music-downloader:
+    build: .
+    ports:
+      - "8765:8765"
+    restart: unless-stopped
+    environment:
+      - PORT=8765
